@@ -44,6 +44,14 @@ def get_most_recent_date_dt(session):
 def get_start_date(session):
     start_date = get_most_recent_date_dt(session) - dt.timedelta(days=365)
     return start_date
+
+def get_temp_stats(session):
+    return session.query(
+        func.min(Measurement.tobs).label("min_temp"),
+        func.max(Measurement.tobs).label("max_temp"),
+        func.avg(Measurement.tobs).label("avg_temp")
+    )
+
 #################################################
 # Flask Routes
 #################################################
@@ -53,7 +61,9 @@ def home():
         f"Available Routes:<br/>"
         f"/api/v1.0/precipitation<br/>"
         f"/api/v1.0/stations<br/>"
-        f"/api/v1.0/tobs"
+        f"/api/v1.0/tobs<br/>"
+        f"/api/v1.0/start/<start_date><br/>"
+        f"/api/v1.0/start/<start_date>/end/<end_date>"
         )
 
 @app.route("/api/v1.0/precipitation")
@@ -93,6 +103,45 @@ def tobs():
         )
     tobs_list = [{"date": date, "tobs": tobs} for date, tobs in tobs_data]
     return jsonify(tobs_list)
+
+
+@app.route("/api/v1.0/start/<start_date>")
+def temp_start(start_date):
+    start_date_dt = dt.datetime.strptime(start_date, "%Y-%m-%d")
+    temp_stats = (
+        get_temp_stats(session)
+        .filter(Measurement.date >= start_date_dt)
+        .one()
+    )
+    
+    # Return the results as JSON
+    return jsonify({
+        "start_date": start_date,
+        "min_temp": temp_stats.min_temp,
+        "max_temp": temp_stats.max_temp,
+        "avg_temp": temp_stats.avg_temp
+    })
+
+
+@app.route("/api/v1.0/start/<start_date>/end/<end_date>")
+def temperature_start_end(start_date, end_date):
+    start_date_dt = dt.datetime.strptime(start_date, "%Y-%m-%d")
+    end_date_dt = dt.datetime.strptime(end_date, "%Y-%m-%d")
+
+    temp_stats = (
+        get_temp_stats(session)
+        .filter(Measurement.date >= start_date_dt)
+        .filter(Measurement.date <= end_date_dt)
+        .one()
+    )
+    
+    return jsonify({
+        "start_date": start_date,
+        "end_date": end_date,
+        "min_temperature": temp_stats.min_temp,
+        "max_temperature": temp_stats.max_temp,
+        "avg_temperature": temp_stats.avg_temp
+    })
 
 if __name__ == '__main__':
     app.run(debug=True)
