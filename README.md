@@ -7,3 +7,5 @@ with command "flask --app app.py run"
 
 Then open a browser and copy paste the address printed in command line, for example http://127.0.0.1:5000; 
 It should display the web app in the browser.
+
+Both solutions source data from the Resources folder which was also included to the repo
